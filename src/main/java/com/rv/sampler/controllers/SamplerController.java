@@ -5,10 +5,13 @@ package com.rv.sampler.controllers;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.LinkedTransferQueue;
+import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,24 +44,29 @@ public class SamplerController {
 	
 	
 	@GetMapping("/employees")
-	public List<Employee> listEmployees() {
-		return repo.findAll();
+	public CollectionModel<EntityModel<Employee>> listEmployees() {
+		
+		List<EntityModel<Employee>> empList =  repo.findAll().stream().map(employee -> EntityModel.of(employee,
+					linkTo(methodOn(SamplerController.class).findEmployee(employee.getId())).withSelfRel(),
+					linkTo(methodOn(SamplerController.class).listEmployees()).withRel("employees"))).collect(Collectors.toList());
+		
+		return CollectionModel.of(empList, linkTo(methodOn(SamplerController.class).listEmployees()).withSelfRel());
 	}
 
 	@GetMapping("/employee/{id}")
-	public Employee findEmployee(@PathVariable Long id) {
+	public EntityModel<Employee> findEmployee(@PathVariable Long id) {
 		
 		Employee em = repo.findById(id).orElseThrow(()->new EmployeeNotFoundException(id));
 		
+		 return EntityModel.of(em, linkTo(methodOn(SamplerController.class).findEmployee(em.getId())).withSelfRel(),
+				 	linkTo(methodOn(SamplerController.class).listEmployees()).withRel("employees")); 
 		
-		return EntityModel.of(em,
-				linkTo(methodOn(SamplerController.class).findEmployee(id)).withSelfRel(),
-				linkTo(methodOn(SamplerController.class).listEmployees()).withRel("employees"));
 		
 	}
 
 	@PostMapping("/addEmployee")
 	public Employee addEmployee(@RequestBody Employee emp) {
+		
 		return repo.save(emp);
 	}
 
