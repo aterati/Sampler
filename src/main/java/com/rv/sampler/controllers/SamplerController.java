@@ -5,8 +5,10 @@ package com.rv.sampler.controllers;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.LinkedTransferQueue;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.rv.sampler.exception.EmployeeNotFoundException;
 import com.rv.sampler.model.Employee;
 import com.rv.sampler.model.EmployeeRepository;
 
@@ -43,8 +46,15 @@ public class SamplerController {
 	}
 
 	@GetMapping("/employee/{id}")
-	public Optional<Employee> findEmployee(@PathVariable Long id) {
-		return repo.findById(id);
+	public Employee findEmployee(@PathVariable Long id) {
+		
+		Employee em = repo.findById(id).orElseThrow(()->new EmployeeNotFoundException(id));
+		
+		
+		return EntityModel.of(em,
+				linkTo(methodOn(SamplerController.class).findEmployee(id)).withSelfRel(),
+				linkTo(methodOn(SamplerController.class).listEmployees()).withRel("employees"));
+		
 	}
 
 	@PostMapping("/addEmployee")
